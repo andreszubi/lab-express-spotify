@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const ejs = require('ejs');
 const expressLayout = require("express-ejs-layouts");
+const bodyParser = require('body-parser')
 // require spotify-web-api-node package here:
 const SpotifyWebApi = require('spotify-web-api-node');
 
@@ -14,6 +15,9 @@ app.set('view engine', 'ejs');
 app.set('views', __dirname + '/views');
 app.use(express.static(__dirname + '/public'));
 
+app.use(bodyParser.json())
+app.use(bodyParser.urlencoded({ extended: true }))
+
 // setting the spotify-api goes here:
 const spotifyApi = new SpotifyWebApi({
     clientId: process.env.CLIENT_ID,
@@ -21,55 +25,55 @@ const spotifyApi = new SpotifyWebApi({
   });
   
   // Retrieve an access token
-  async function retriveAccessToken(){
-    try {
-        const data = await spotifyApi.clientCredentialsGrant();
-        spotifyApi.setAccessToken(data.body["access_token"]);
-      } catch (error) {
-        console.log("Something went wrong when retrieving an access token.", error);
-      }
-    }
-
-    retriveAccessToken();
-
-    //Body Parser
-    app.use(express.urlencoded({ extended: true }));
-
-
+  spotifyApi
+    .clientCredentialsGrant()
+    .then(data => spotifyApi.setAccessToken(data.body['access_token']))
+    .catch(error => console.log('Something went wrong when retrieving an access token', error));
 
 // Our routes go here:
-app.get('/', async (req, res) => {
- try {
-    res.render('index');
-  }
-  catch (error) {
-    console.log("Something went wrong when loading homepage.", error);
- }
-});
+app.get('/', (req,res)=> {
+    res.render('index')
+})
 
  
-app.get('/search-artist', async (req, res, next) => {
-    try {
-        const { artist } = req.query;
-        await spotifyApi.searchArtists(artist);
-       
-        const artistItems = data.body.artists.items.map((artist) => artist);
-        await app.get("artist-search-results", (req, res) => {
-            res.render("artist-search-results", { artistItems })});
-    } catch (error) {
-        console.log('The error while searching artists occurred: ', error);
-}
+app.get('/search-artist', async (req, res)=> {
+    const {artistName} = req.query;
+    const listOfArtists = await spotifyApi.searchArtists(artistName)
+    //console.log('The received data from the API: ', listOfArtists.body.artists.items);
+    const artistArray =  listOfArtists.body.artists.items
+    //console.log(artistArray) 
+    res.render('search-artist-results', {artistArray})
 })
+app.get('/albums/:artistId', async (req, res)=> {
+    const { artistId } = req.params
+    //console.log(artistId)
+    const listOfAlbumsData = await spotifyApi.getArtistAlbums(
+        artistId,
+        { limit: 10, offset: 20 },
+    ); 
 
-app.get('/albums/:artistId', async (req, res) => {
-    console.log('The received data from the API: ', data.body);
-    try {
-        const data = await spotifyApi.getArtistAlbums(data.artistId);
-        const albums = data.body.items;
-        res.render("albums", {albums});
-    } catch (error) {
-        console.log('The error while searching artists occurred: ', error);
-}
-})
 
-app.listen(3000, () => console.log('My Spotify project running on port 3000 🎧 🥁 🎸 🔊'));
+    const listOfAlbums = (listOfAlbumsData.body.items)
+    //console.log(listOfAlbums)
+    res.render('albums', {listOfAlbums})
+});
+
+
+ app.get('/tracks/:albumId', async (req, res)=> {
+    const { albumId } = req.params
+    console.log(albumId)
+    const listOfTracks = await spotifyApi.getArtistAlbums(
+        albumId,
+        { limit: 5, offset: 1 },
+    );
+    const listOfTracksCleaned = (listOfTracks.body.items)
+    console.log(listOfTracksCleaned)
+    res.render('tracks', {listOfTracksCleaned})
+}); 
+
+
+
+
+
+
+app.listen(3001, () => console.log('My Spotify project running on port 3001 🎧 🥁 🎸 🔊'));

@@ -1,0 +1,11 @@
+//Display album tracks and link to preview
+<div>
+    <h1>Tracks</h1>
+    <h2>Album: <%= albumName %></h2>
+    <% listOfTracksCleaned.forEach(track => { %>
+        <p> <%= track.name %> </p>
+        <audio controls>
+            <source src="<%= track.preview_url %>" type="audio/mpeg">
+        </audio>
+    <% }) %>
+</div>
